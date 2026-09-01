@@ -28,7 +28,7 @@ impl KnownPacksClientboundPacket {
 
         let mut packs = Vec::new();
 
-        for i in 0..length {
+        for _ in 0..length {
             let namespace = McString::decode(data).ok()?.0;
             let id = McString::decode(data).ok()?.0;
             let version = McString::decode(data).ok()?.0;

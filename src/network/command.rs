@@ -4,10 +4,12 @@ use crate::protocol::packets::{
         known_packs::KnownPacksServerboundPacket,
     },
     login::login_acknowledged::LoginAcknowledgedPacket,
+    status::ping_request::PingRequestPacket,
 };
 
 pub enum NetworkCommand {
     SendLoginAcknowledgedPacket(LoginAcknowledgedPacket),
     SendKnownPacksPacket(KnownPacksServerboundPacket),
     SendAcknowledgeFinishConfigurationPacket(AcknowledgeFinishConfigurationPacket),
+    SendPingRequestPacket(PingRequestPacket),
 }

@@ -1,6 +1,8 @@
 use crate::protocol::packets::configuration::clientbound::finish_configuration::FinishConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
+use crate::protocol::packets::status::pong_response::PongResponsePacket;
+use crate::protocol::packets::status::status_response::StatusResponsePacket;
 use bytes::BytesMut;
 
 use crate::protocol::state::ConnectionState;
@@ -9,6 +11,9 @@ pub struct PacketDispatcher {}
 
 #[derive(Debug)]
 pub enum Event {
+    StatusResponse { packet: StatusResponsePacket },
+    PongResponse { packet: PongResponsePacket },
+
     LoginDisconnect,
     EncryptionRequest,
     LoginSuccess { packet: LoginSuccessPacket },
@@ -40,6 +45,15 @@ impl PacketDispatcher {
         data: &mut BytesMut,
     ) -> Result<Event, Error> {
         match state {
+            ConnectionState::Status => match id {
+                0 => Ok(Event::StatusResponse {
+                    packet: StatusResponsePacket::decode(data).ok_or(Error::UnknownPacket)?,
+                }),
+                1 => Ok(Event::PongResponse {
+                    packet: PongResponsePacket::decode(data).ok_or(Error::UnknownPacket)?,
+                }),
+                _ => Err(Error::UnknownPacket),
+            },
             ConnectionState::Login => match id {
                 0 => Ok(Event::LoginDisconnect),
                 1 => Ok(Event::EncryptionRequest),

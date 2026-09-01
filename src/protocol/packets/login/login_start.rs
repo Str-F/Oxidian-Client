@@ -1,5 +1,5 @@
 use crate::protocol::types::mcstring::McString;
-use crate::protocol::{state::ConnectionState, traits::packet::ServerboundPacket, varint};
+use crate::protocol::{state::ConnectionState, traits::packet::ServerboundPacket};
 use bytes::BytesMut;
 
 #[derive(Debug)]
