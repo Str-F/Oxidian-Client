@@ -4,11 +4,11 @@ use crate::protocol::packets::configuration::serverbound::acknowledge_finish_con
 use crate::protocol::packets::configuration::serverbound::known_packs::KnownPacksServerboundPacket;
 use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
 use crate::protocol::packets::status::ping_request::PingRequestPacket;
+use crate::protocol::registry::Registry;
 use crate::server::Server;
 use crate::{
     network::command::NetworkCommand, protocol::packets::status::ping_request::START_TIME,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
 
 pub const PROTOCOL_VER: i32 = 776;
@@ -18,6 +18,7 @@ pub const USERNAME: &str = "OxidianClientUsr";
 pub struct Client {
     event_receiver: Option<mpsc::Receiver<Event>>,
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
+    registry: Registry,
     running: bool,
 }
 
@@ -26,12 +27,18 @@ impl Client {
         Self {
             event_receiver: None,
             command_sender: None,
+            registry: Registry::new(),
             running: true,
         }
     }
 
+    pub fn stop(&mut self) {
+        self.running = false;
+    }
+
     pub async fn run(&mut self) {
         self.get_status().await;
+        self.connect_server().await;
 
         while self.running {
             self.update();
@@ -62,6 +69,7 @@ impl Client {
 
     pub async fn connect_server(&mut self) {
         let server = Server::new("localhost", 25565);
+        Registry::new();
 
         match NetworkManager::join_server(&server).await {
             Ok((command_sender, event_receiver)) => {
@@ -100,7 +108,7 @@ impl Client {
         }
 
         for event in events {
-            println!("Received event: {:?}", event);
+            //println!("Received event: {:?}", event);
             self.handle_event(event);
         }
     }
@@ -172,8 +180,19 @@ impl Client {
                 }
             }
 
+            Event::RegistryData2 { packet } => {
+                println!(
+                    "Received registry data 2 packet: {:?} with {} entries",
+                    packet.id,
+                    packet.entries.len()
+                );
+                self.registry
+                    .add_to_registry(packet.id.clone(), packet.entries);
+            }
+
             Event::FinishConfiguration { packet } => {
                 println!("Received finish configuration packet: {:?}", packet);
+                self.stop();
                 let acknowledge_finish_configuration_packet = AcknowledgeFinishConfigurationPacket;
                 if let Some(command_sender) = &self.command_sender {
                     println!(

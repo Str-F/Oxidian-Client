@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 bytes = "1.12.1"
+fastnbt = "2.6.3"
+serde_json = "1.0.151"
 tokio = { version = "1.53.1", features = ["full"] }
 
 [dependencies.uuid]

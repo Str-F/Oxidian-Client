@@ -1,5 +1,6 @@
 use crate::protocol::packets::configuration::clientbound::finish_configuration::FinishConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
+use crate::protocol::packets::configuration::clientbound::registry_data_2::RegistryData2ClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
 use crate::protocol::packets::status::pong_response::PongResponsePacket;
 use crate::protocol::packets::status::status_response::StatusResponsePacket;
@@ -11,20 +12,34 @@ pub struct PacketDispatcher {}
 
 #[derive(Debug)]
 pub enum Event {
-    StatusResponse { packet: StatusResponsePacket },
-    PongResponse { packet: PongResponsePacket },
+    StatusResponse {
+        packet: StatusResponsePacket,
+    },
+    PongResponse {
+        packet: PongResponsePacket,
+    },
 
     LoginDisconnect,
     EncryptionRequest,
-    LoginSuccess { packet: LoginSuccessPacket },
+    LoginSuccess {
+        packet: LoginSuccessPacket,
+    },
     SetCompression,
     LoginPluginRequest,
     CookieRequest,
 
     PluginMessage,
-    FinishConfiguration { packet: FinishConfigurationPacket },
+    FinishConfiguration {
+        packet: FinishConfigurationPacket,
+    },
     FeatureFlags,
-    KnownPacks { packet: KnownPacksClientboundPacket },
+    KnownPacks {
+        packet: KnownPacksClientboundPacket,
+    },
+    RegistryData2 {
+        packet: RegistryData2ClientboundPacket,
+    },
+    UpdateTags,
 }
 
 #[derive(Debug)]
@@ -52,7 +67,10 @@ impl PacketDispatcher {
                 1 => Ok(Event::PongResponse {
                     packet: PongResponsePacket::decode(data).ok_or(Error::UnknownPacket)?,
                 }),
-                _ => Err(Error::UnknownPacket),
+                _ => {
+                    println!("Unknwon status state packet: id: {}, data: {:?}", id, data);
+                    Err(Error::UnknownPacket)
+                }
             },
             ConnectionState::Login => match id {
                 0 => Ok(Event::LoginDisconnect),
@@ -63,20 +81,37 @@ impl PacketDispatcher {
                 3 => Ok(Event::SetCompression),
                 4 => Ok(Event::LoginPluginRequest),
                 5 => Ok(Event::CookieRequest),
-                _ => Err(Error::UnknownPacket),
+                _ => {
+                    println!("Unknwon login state packet: id: {}, data: {:?}", id, data);
+                    Err(Error::UnknownPacket)
+                }
             },
             ConnectionState::Configuration => match id {
                 1 => Ok(Event::PluginMessage),
                 3 => Ok(Event::FinishConfiguration {
                     packet: FinishConfigurationPacket,
                 }),
+                7 => Ok(Event::RegistryData2 {
+                    packet: RegistryData2ClientboundPacket::decode(data)
+                        .ok_or(Error::UnknownPacket)?,
+                }),
                 12 => Ok(Event::FeatureFlags),
+                13 => Ok(Event::UpdateTags),
                 14 => Ok(Event::KnownPacks {
                     packet: KnownPacksClientboundPacket::decode(data)
                         .ok_or(Error::UnknownPacket)?,
                 }),
                 _ => {
-                    println!("Unknwon Configuration packet: id: {}, data: {:?}", id, data);
+                    println!(
+                        "Unknwon configuration state packet: id: {}, data: {:?}",
+                        id, data
+                    );
+                    Err(Error::UnknownPacket)
+                }
+            },
+            ConnectionState::Play => match id {
+                _ => {
+                    println!("Unknwon play state packet: id: {}, data: {:?}", id, data);
                     Err(Error::UnknownPacket)
                 }
             },

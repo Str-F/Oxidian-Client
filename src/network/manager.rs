@@ -132,7 +132,7 @@ impl NetworkManager {
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("Failed to dispatch packet: {:?}", e);
+                                    eprintln!("Failed to dispatch packet: {} , Error: {:?}", packet_id, e);
                                 }
                             }
                         }

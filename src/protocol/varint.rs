@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 
 pub enum VarIntError {
     NotEnoughBytes,
@@ -40,4 +40,10 @@ pub fn decode(input: &BytesMut) -> Result<(i32, usize), VarIntError> {
         }
     }
     Ok((output, bytes_count))
+}
+
+pub fn decode_mut(input: &mut BytesMut) -> Result<(i32), VarIntError> {
+    let (ouput, bytes_count) = decode(input)?;
+    input.advance(bytes_count);
+    Ok(ouput)
 }
