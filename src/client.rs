@@ -5,6 +5,7 @@ use crate::protocol::packets::configuration::serverbound::known_packs::KnownPack
 use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
 use crate::protocol::packets::status::ping_request::PingRequestPacket;
 use crate::protocol::registry::Registry;
+use crate::protocol::tags::Tags;
 use crate::server::Server;
 use crate::{
     network::command::NetworkCommand, protocol::packets::status::ping_request::START_TIME,
@@ -19,6 +20,7 @@ pub struct Client {
     event_receiver: Option<mpsc::Receiver<Event>>,
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
     registry: Registry,
+    tags: Tags,
     running: bool,
 }
 
@@ -28,6 +30,7 @@ impl Client {
             event_receiver: None,
             command_sender: None,
             registry: Registry::new(),
+            tags: Tags::new(),
             running: true,
         }
     }
@@ -180,14 +183,36 @@ impl Client {
                 }
             }
 
-            Event::RegistryData2 { packet } => {
+            Event::RegistryData { packet } => {
                 println!(
-                    "Received registry data 2 packet: {:?} with {} entries",
+                    "Received registry data packet: {:?} with {} entries",
                     packet.id,
                     packet.entries.len()
                 );
                 self.registry
                     .add_to_registry(packet.id.clone(), packet.entries);
+            }
+
+            Event::UpdateTags { packet } => {
+                println!(
+                    "Received update tags packet: {:?} with {} entries",
+                    packet
+                        .registries
+                        .iter()
+                        .map(|r| &r.registry)
+                        .collect::<Vec<_>>(),
+                    packet
+                        .registries
+                        .iter()
+                        .map(|r| r.tags.len())
+                        .sum::<usize>()
+                );
+                for reg in packet.registries {
+                    for tag in reg.tags {
+                        self.tags
+                            .update_tag(reg.registry.clone(), tag.name, tag.entries);
+                    }
+                }
             }
 
             Event::FinishConfiguration { packet } => {

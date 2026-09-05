@@ -1,6 +1,7 @@
 use crate::protocol::packets::configuration::clientbound::finish_configuration::FinishConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
-use crate::protocol::packets::configuration::clientbound::registry_data_2::RegistryData2ClientboundPacket;
+use crate::protocol::packets::configuration::clientbound::registry_data::RegistryDataClientboundPacket;
+use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
 use crate::protocol::packets::status::pong_response::PongResponsePacket;
 use crate::protocol::packets::status::status_response::StatusResponsePacket;
@@ -36,10 +37,12 @@ pub enum Event {
     KnownPacks {
         packet: KnownPacksClientboundPacket,
     },
-    RegistryData2 {
-        packet: RegistryData2ClientboundPacket,
+    RegistryData {
+        packet: RegistryDataClientboundPacket,
     },
-    UpdateTags,
+    UpdateTags {
+        packet: UpdateTagsClientboundPacket,
+    },
 }
 
 #[derive(Debug)]
@@ -91,12 +94,15 @@ impl PacketDispatcher {
                 3 => Ok(Event::FinishConfiguration {
                     packet: FinishConfigurationPacket,
                 }),
-                7 => Ok(Event::RegistryData2 {
-                    packet: RegistryData2ClientboundPacket::decode(data)
+                7 => Ok(Event::RegistryData {
+                    packet: RegistryDataClientboundPacket::decode(data)
                         .ok_or(Error::UnknownPacket)?,
                 }),
                 12 => Ok(Event::FeatureFlags),
-                13 => Ok(Event::UpdateTags),
+                13 => Ok(Event::UpdateTags {
+                    packet: UpdateTagsClientboundPacket::decode(data)
+                        .ok_or(Error::UnknownPacket)?,
+                }),
                 14 => Ok(Event::KnownPacks {
                     packet: KnownPacksClientboundPacket::decode(data)
                         .ok_or(Error::UnknownPacket)?,

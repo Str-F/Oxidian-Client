@@ -1,5 +1,5 @@
 use crate::protocol::types::registry_entry::RegistryEntry;
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fs};
 
 #[derive(Debug, Default)]
 pub struct Registry {
@@ -46,12 +46,8 @@ impl Registry {
 
         let file_path = format!("assets/data/{}/{}/{}.json", namespace, path, entry_name);
 
-        if Path::new(&file_path).exists() {
-            let file_content = fs::read_to_string(&file_path).ok()?;
-            serde_json::from_str(&file_content).ok()
-        } else {
-            None
-        }
+        let file_contents = fs::read_to_string(&file_path).ok()?;
+        serde_json::from_str(&file_contents).ok()
     }
 
     pub fn get(&self, registry_id: &str, entry_id: &str) -> Option<&serde_json::Value> {

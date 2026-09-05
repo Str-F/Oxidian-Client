@@ -8,12 +8,12 @@ use crate::protocol::types::mcstring::McString;
 use crate::protocol::{traits::packet::ClientboundPacket, types::registry_entry::RegistryEntry};
 
 #[derive(Debug)]
-pub struct RegistryData2ClientboundPacket {
+pub struct RegistryDataClientboundPacket {
     pub id: String,
     pub entries: Vec<RegistryEntry>,
 }
 
-impl RegistryData2ClientboundPacket {
+impl RegistryDataClientboundPacket {
     pub fn decode(read: &mut BytesMut) -> Option<Self> {
         let registry_id = McString::decode(read).ok()?.0;
 
@@ -52,7 +52,7 @@ impl RegistryData2ClientboundPacket {
     }
 }
 
-impl ClientboundPacket for RegistryData2ClientboundPacket {
+impl ClientboundPacket for RegistryDataClientboundPacket {
     fn state(&self) -> ConnectionState {
         ConnectionState::Configuration
     }
