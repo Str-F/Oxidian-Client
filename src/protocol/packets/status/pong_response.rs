@@ -19,11 +19,11 @@ impl PongResponsePacket {
 }
 
 impl ClientboundPacket for PongResponsePacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Status
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         1
     }
 }

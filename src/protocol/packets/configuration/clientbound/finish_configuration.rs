@@ -4,11 +4,11 @@ use crate::protocol::{state::ConnectionState, traits::packet::ClientboundPacket}
 pub struct FinishConfigurationPacket;
 
 impl ClientboundPacket for FinishConfigurationPacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Configuration
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         3
     }
 }

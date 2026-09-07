@@ -13,13 +13,6 @@ pub struct PacketDispatcher {}
 
 #[derive(Debug)]
 pub enum Event {
-    StatusResponse {
-        packet: StatusResponsePacket,
-    },
-    PongResponse {
-        packet: PongResponsePacket,
-    },
-
     LoginDisconnect,
     EncryptionRequest,
     LoginSuccess {
@@ -63,18 +56,6 @@ impl PacketDispatcher {
         data: &mut BytesMut,
     ) -> Result<Event, Error> {
         match state {
-            ConnectionState::Status => match id {
-                0 => Ok(Event::StatusResponse {
-                    packet: StatusResponsePacket::decode(data).ok_or(Error::UnknownPacket)?,
-                }),
-                1 => Ok(Event::PongResponse {
-                    packet: PongResponsePacket::decode(data).ok_or(Error::UnknownPacket)?,
-                }),
-                _ => {
-                    println!("Unknwon status state packet: id: {}, data: {:?}", id, data);
-                    Err(Error::UnknownPacket)
-                }
-            },
             ConnectionState::Login => match id {
                 0 => Ok(Event::LoginDisconnect),
                 1 => Ok(Event::EncryptionRequest),

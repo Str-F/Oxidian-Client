@@ -11,11 +11,11 @@ impl LoginAcknowledgedPacket {
 }
 
 impl ServerboundPacket for LoginAcknowledgedPacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Login
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         3
     }
 

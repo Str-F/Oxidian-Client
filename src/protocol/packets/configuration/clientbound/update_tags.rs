@@ -54,11 +54,11 @@ impl UpdateTagsClientboundPacket {
 }
 
 impl ClientboundPacket for UpdateTagsClientboundPacket {
-    fn state(&self) -> crate::protocol::state::ConnectionState {
+    fn state() -> crate::protocol::state::ConnectionState {
         ConnectionState::Configuration
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         13
     }
 }

@@ -53,11 +53,11 @@ impl RegistryDataClientboundPacket {
 }
 
 impl ClientboundPacket for RegistryDataClientboundPacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Configuration
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         7
     }
 }

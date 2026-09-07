@@ -43,11 +43,11 @@ impl HandshakePacket {
 }
 
 impl ServerboundPacket for HandshakePacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Handshaking
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         0
     }
 

@@ -15,11 +15,11 @@ impl LoginStartPacket {
 }
 
 impl ServerboundPacket for LoginStartPacket {
-    fn state(&self) -> ConnectionState {
+    fn state() -> ConnectionState {
         ConnectionState::Login
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         0
     }
 

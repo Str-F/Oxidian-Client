@@ -10,11 +10,11 @@ pub struct LoginSuccessPacket {
 }
 
 impl ClientboundPacket for LoginSuccessPacket {
-    fn state(&self) -> crate::protocol::state::ConnectionState {
+    fn state() -> crate::protocol::state::ConnectionState {
         ConnectionState::Login
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         2
     }
 }

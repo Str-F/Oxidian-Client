@@ -1,15 +1,12 @@
+use crate::network::command::NetworkCommand;
 use crate::network::manager::NetworkManager;
 use crate::protocol::dispatcher::Event;
 use crate::protocol::packets::configuration::serverbound::acknowledge_finish_configuration::AcknowledgeFinishConfigurationPacket;
 use crate::protocol::packets::configuration::serverbound::known_packs::KnownPacksServerboundPacket;
 use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
-use crate::protocol::packets::status::ping_request::PingRequestPacket;
 use crate::protocol::registry::Registry;
 use crate::protocol::tags::Tags;
 use crate::server::Server;
-use crate::{
-    network::command::NetworkCommand, protocol::packets::status::ping_request::START_TIME,
-};
 use tokio::sync::mpsc;
 
 pub const PROTOCOL_VER: i32 = 776;
@@ -53,14 +50,13 @@ impl Client {
         let server = Server::new("localhost", 25565);
 
         match NetworkManager::get_status_server(&server).await {
-            Ok((command_sender, event_receiver)) => {
-                self.command_sender = Some(command_sender);
-                self.event_receiver = Some(event_receiver);
-                println!("Connected to server: {}:{}", server.host(), server.port());
+            Ok(status) => {
+                println!("Server status: {:?}", status.0);
+                println!("Server ping: {}", status.1);
             }
             Err(e) => {
                 eprintln!(
-                    "Failed to connect to server: {}:{} - {}",
+                    "Failed to get server status: {}:{} - {}",
                     server.host(),
                     server.port(),
                     e
@@ -118,28 +114,6 @@ impl Client {
 
     pub fn handle_event(&mut self, event: Event) {
         match event {
-            Event::StatusResponse { packet } => {
-                println!("Received status response packet: {:?}", packet);
-                let ping_request_packet = PingRequestPacket::new();
-                if let Some(command_sender) = &self.command_sender {
-                    println!("Sending ping request packet: {:?}", ping_request_packet);
-                    if let Err(e) = command_sender
-                        .try_send(NetworkCommand::SendPingRequestPacket(ping_request_packet))
-                    {
-                        eprintln!("Failed to send ping request packet: {}", e);
-                    }
-                }
-            }
-
-            Event::PongResponse { packet } => {
-                println!("Received pong response packet: {:?}", packet);
-
-                let now = START_TIME.elapsed().as_millis() as i64;
-                let latency_ms = now - packet.timestamp;
-
-                println!("Ping response time: {} ms", latency_ms);
-            }
-
             Event::LoginSuccess { packet } => {
                 println!("Handling packet: {:?}", packet);
                 println!(

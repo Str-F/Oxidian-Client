@@ -12,11 +12,11 @@ pub struct KnownPacksClientboundPacket {
 }
 
 impl ClientboundPacket for KnownPacksClientboundPacket {
-    fn state(&self) -> crate::protocol::state::ConnectionState {
+    fn state() -> crate::protocol::state::ConnectionState {
         ConnectionState::Configuration
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         14
     }
 }

@@ -28,16 +28,16 @@ impl Connection {
         self.state
     }
 
-    pub async fn send(&mut self, packet_data: impl ServerboundPacket) -> Result<(), Error> {
-        if self.state != packet_data.state() {
+    pub async fn send<P: ServerboundPacket>(&mut self, packet_data: P) -> Result<(), Error> {
+        if self.state != P::state() {
             panic!(
                 "Invalid connection state for sending packet: expected {:?}, got {:?}",
                 self.state,
-                packet_data.state()
+                P::state()
             );
         }
-        let data = packet::encode(packet_data.id(), &packet_data.encode_data());
-        println!("Sending packet id: {}", packet_data.id());
+        let data = packet::encode(P::id(), &packet_data.encode_data());
+        println!("Sending packet id: {}", P::id());
         println!("{:02X?}", data);
         self.stream.write_all(&data).await?;
         Ok(())

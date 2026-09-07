@@ -2,13 +2,19 @@ use crate::client;
 use crate::network::command::NetworkCommand;
 use crate::network::connection::Connection;
 use crate::protocol::dispatcher::{Event, PacketDispatcher};
-use crate::protocol::packets::status::status_request::StatusRequestPacket;
+use crate::protocol::packets::status::ping_request::START_TIME;
+use crate::protocol::packets::status::{
+    ping_request::PingRequestPacket, pong_response::PongResponsePacket,
+    status_request::StatusRequestPacket, status_response::StatusResponsePacket,
+};
 use crate::protocol::packets::{
     handshake::{ClientIntent, HandshakePacket},
     login::login_start::LoginStartPacket,
 };
 use crate::protocol::state::ConnectionState;
+use crate::protocol::traits::packet::ClientboundPacket;
 use crate::server::Server;
+use std::io::ErrorKind;
 
 use std::io::Error;
 use tokio::sync::mpsc;
@@ -20,9 +26,7 @@ pub struct NetworkManager {
 }
 
 impl NetworkManager {
-    pub async fn get_status_server(
-        server: &Server,
-    ) -> Result<(mpsc::Sender<NetworkCommand>, mpsc::Receiver<Event>), Error> {
+    pub async fn get_status_server(server: &Server) -> Result<(StatusResponsePacket, i32), Error> {
         let mut connection = Connection::new(server.host(), server.port()).await?;
 
         let handshake = HandshakePacket::new(
@@ -48,19 +52,51 @@ impl NetworkManager {
 
         connection.send(status_request_packet).await?;
 
-        let (command_sender, command_receiver) = mpsc::channel::<NetworkCommand>(100);
-        let (event_sender, event_receiver) = mpsc::channel::<Event>(100);
+        let (packet_id, mut packet_data) = connection.read_packet().await?;
 
-        let manager = Self {
-            connection,
-            dispatcher: PacketDispatcher::new(),
-        };
+        if packet_id == StatusResponsePacket::id() {
+            if let Some(status_response_packet) = StatusResponsePacket::decode(&mut packet_data) {
+                let ping_request_packet = PingRequestPacket::new();
 
-        tokio::spawn(async move {
-            manager.run(command_receiver, event_sender).await;
-        });
+                println!(
+                    "Sending ping request packet to server: {:?}",
+                    ping_request_packet
+                );
 
-        Ok((command_sender, event_receiver))
+                connection.send(ping_request_packet).await?;
+
+                let (packet_id, mut packet_data) = connection.read_packet().await?;
+
+                let mut latency_ms = -1;
+
+                if packet_id == PongResponsePacket::id() {
+                    if let Some(pong) = PongResponsePacket::decode(&mut packet_data) {
+                        println!("Received pong response packet: {:?}", packet_data);
+
+                        let now = START_TIME.elapsed().as_millis() as i64;
+                        latency_ms = (now - pong.timestamp) as i32;
+
+                        println!("Ping response time: {} ms", latency_ms);
+                    }
+                }
+
+                match connection.read_packet().await {
+                    Ok((packet_id, _)) => {
+                        println!("Received unexpected packet after ping: {:?}", packet_id);
+                    }
+                    Err(e) => {
+                        println!("Connection closed as expected: {}", e);
+                    }
+                }
+
+                return Ok((status_response_packet, latency_ms));
+            }
+        }
+
+        Err(Error::new(
+            ErrorKind::InvalidData,
+            "Failed to receive status response packet",
+        ))
     }
 
     pub async fn join_server(
@@ -152,13 +188,6 @@ impl NetworkManager {
 
     async fn handle_command(&mut self, command: NetworkCommand) {
         match command {
-            NetworkCommand::SendPingRequestPacket(ping_request_packet) => {
-                if let Err(e) = self.connection.send(ping_request_packet).await {
-                    eprintln!("Failed to send ping request packet: {}", e);
-                    return;
-                }
-            }
-
             NetworkCommand::SendLoginAcknowledgedPacket(login_ack_packet) => {
                 if let Err(e) = self.connection.send(login_ack_packet).await {
                     eprintln!("Failed to send login acknowledged packet: {}", e);

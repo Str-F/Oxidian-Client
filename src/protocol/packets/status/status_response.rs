@@ -19,11 +19,11 @@ impl StatusResponsePacket {
 }
 
 impl ClientboundPacket for StatusResponsePacket {
-    fn state(&self) -> crate::protocol::state::ConnectionState {
+    fn state() -> crate::protocol::state::ConnectionState {
         ConnectionState::Status
     }
 
-    fn id(&self) -> i32 {
+    fn id() -> i32 {
         0
     }
 }
