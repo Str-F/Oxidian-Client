@@ -1,4 +1,5 @@
 use crate::protocol::{
+    error::ProtocolError,
     state::ConnectionState,
     traits::packet::ClientboundPacket,
     types::{known_packs::KnownPacks as KnownPacksType, mcstring::McString},
@@ -22,16 +23,16 @@ impl ClientboundPacket for KnownPacksClientboundPacket {
 }
 
 impl KnownPacksClientboundPacket {
-    pub fn decode(data: &mut BytesMut) -> Option<Self> {
-        let (length, length_size) = varint::decode(data).ok()?;
+    pub fn decode(data: &mut BytesMut) -> Result<Self, ProtocolError> {
+        let (length, length_size) = varint::decode(data)?;
         data.advance(length_size);
 
         let mut packs = Vec::new();
 
         for _ in 0..length {
-            let namespace = McString::decode(data).ok()?.0;
-            let id = McString::decode(data).ok()?.0;
-            let version = McString::decode(data).ok()?.0;
+            let namespace = McString::decode(data)?.0;
+            let id = McString::decode(data)?.0;
+            let version = McString::decode(data)?.0;
 
             packs.push(KnownPacksType {
                 namespace,
@@ -40,6 +41,6 @@ impl KnownPacksClientboundPacket {
             });
         }
 
-        Some(Self { packs })
+        Ok(Self { packs })
     }
 }

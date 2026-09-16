@@ -1,6 +1,7 @@
 use crate::protocol::{packet, state::ConnectionState, traits::packet::ServerboundPacket};
 use bytes::BytesMut;
 use std::io::Error;
+use std::io::ErrorKind;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -30,11 +31,14 @@ impl Connection {
 
     pub async fn send<P: ServerboundPacket>(&mut self, packet_data: P) -> Result<(), Error> {
         if self.state != P::state() {
-            panic!(
-                "Invalid connection state for sending packet: expected {:?}, got {:?}",
-                self.state,
-                P::state()
-            );
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Cannot send packet in state {:?}, expected state {:?}",
+                    self.state,
+                    P::state()
+                ),
+            ));
         }
         let data = packet::encode(P::id(), &packet_data.encode_data());
         println!("Sending packet id: {}", P::id());

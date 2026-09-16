@@ -3,8 +3,6 @@ use crate::protocol::packets::configuration::clientbound::known_packs::KnownPack
 use crate::protocol::packets::configuration::clientbound::registry_data::RegistryDataClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
-use crate::protocol::packets::status::pong_response::PongResponsePacket;
-use crate::protocol::packets::status::status_response::StatusResponsePacket;
 use bytes::BytesMut;
 
 use crate::protocol::state::ConnectionState;
@@ -60,7 +58,7 @@ impl PacketDispatcher {
                 0 => Ok(Event::LoginDisconnect),
                 1 => Ok(Event::EncryptionRequest),
                 2 => Ok(Event::LoginSuccess {
-                    packet: LoginSuccessPacket::decode(data).ok_or(Error::UnknownPacket)?,
+                    packet: LoginSuccessPacket::decode(data).map_err(|_| Error::UnknownPacket)?,
                 }),
                 3 => Ok(Event::SetCompression),
                 4 => Ok(Event::LoginPluginRequest),
@@ -77,16 +75,16 @@ impl PacketDispatcher {
                 }),
                 7 => Ok(Event::RegistryData {
                     packet: RegistryDataClientboundPacket::decode(data)
-                        .ok_or(Error::UnknownPacket)?,
+                        .map_err(|_| Error::UnknownPacket)?,
                 }),
                 12 => Ok(Event::FeatureFlags),
                 13 => Ok(Event::UpdateTags {
                     packet: UpdateTagsClientboundPacket::decode(data)
-                        .ok_or(Error::UnknownPacket)?,
+                        .map_err(|_| Error::UnknownPacket)?,
                 }),
                 14 => Ok(Event::KnownPacks {
                     packet: KnownPacksClientboundPacket::decode(data)
-                        .ok_or(Error::UnknownPacket)?,
+                        .map_err(|_| Error::UnknownPacket)?,
                 }),
                 _ => {
                     println!(

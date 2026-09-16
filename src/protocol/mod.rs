@@ -1,4 +1,5 @@
 pub mod dispatcher;
+pub mod error;
 pub mod packet;
 pub mod packets;
 pub mod registry;

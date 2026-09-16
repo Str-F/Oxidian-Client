@@ -55,7 +55,7 @@ impl NetworkManager {
         let (packet_id, mut packet_data) = connection.read_packet().await?;
 
         if packet_id == StatusResponsePacket::id() {
-            if let Some(status_response_packet) = StatusResponsePacket::decode(&mut packet_data) {
+            if let Ok(status_response_packet) = StatusResponsePacket::decode(&mut packet_data) {
                 let ping_request_packet = PingRequestPacket::new();
 
                 println!(
@@ -70,7 +70,7 @@ impl NetworkManager {
                 let mut latency_ms = -1;
 
                 if packet_id == PongResponsePacket::id() {
-                    if let Some(pong) = PongResponsePacket::decode(&mut packet_data) {
+                    if let Ok(pong) = PongResponsePacket::decode(&mut packet_data) {
                         println!("Received pong response packet: {:?}", packet_data);
 
                         let now = START_TIME.elapsed().as_millis() as i64;

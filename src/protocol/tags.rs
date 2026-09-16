@@ -16,9 +16,10 @@ impl Tags {
     }
 
     pub fn is_in_tag(&self, tag_registry: &str, tag_name: &str, tag_id: i32) -> bool {
-        self.tags
-            .get(tag_registry)
-            .and_then(|reg_tags| reg_tags.get(tag_name))
-            .map_or(false, |set| set.contains(&tag_id))
+        self.tags.get(tag_registry).is_some_and(|registry_tags| {
+            registry_tags
+                .get(tag_name)
+                .is_some_and(|tag_entries| tag_entries.contains(&tag_id))
+        })
     }
 }

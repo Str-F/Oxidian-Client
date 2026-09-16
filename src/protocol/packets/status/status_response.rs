@@ -1,7 +1,8 @@
 use bytes::BytesMut;
 
 use crate::protocol::{
-    state::ConnectionState, traits::packet::ClientboundPacket, types::mcstring::McString,
+    error::ProtocolError, state::ConnectionState, traits::packet::ClientboundPacket,
+    types::mcstring::McString,
 };
 
 #[derive(Debug)]
@@ -10,10 +11,9 @@ pub struct StatusResponsePacket {
 }
 
 impl StatusResponsePacket {
-    pub fn decode(bytes: &mut BytesMut) -> Option<Self> {
-        let json = McString::decode(bytes);
-        Some(Self {
-            json_response: json.ok()?.0,
+    pub fn decode(bytes: &mut BytesMut) -> Result<Self, ProtocolError> {
+        Ok(Self {
+            json_response: McString::decode(bytes)?.0,
         })
     }
 }

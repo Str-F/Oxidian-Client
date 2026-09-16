@@ -1,3 +1,4 @@
+use crate::protocol::error::ProtocolError;
 use crate::protocol::varint;
 use bytes::Buf;
 use bytes::BytesMut;
@@ -14,17 +15,17 @@ pub struct RegistryDataClientboundPacket {
 }
 
 impl RegistryDataClientboundPacket {
-    pub fn decode(read: &mut BytesMut) -> Option<Self> {
-        let registry_id = McString::decode(read).ok()?.0;
+    pub fn decode(read: &mut BytesMut) -> Result<Self, ProtocolError> {
+        let registry_id = McString::decode(read)?.0;
 
-        let count = varint::decode_mut(read).ok()? as usize;
+        let count = varint::decode_mut(read)? as usize;
         let mut entries = Vec::with_capacity(count);
 
         for _ in 0..count {
-            let entry_id = McString::decode(read).ok()?.0;
+            let entry_id = McString::decode(read)?.0;
 
             if !read.has_remaining() {
-                return None;
+                return Err(ProtocolError::UnexpectedEof);
             }
             let has_data = read.get_u8() != 0;
 
@@ -32,8 +33,8 @@ impl RegistryDataClientboundPacket {
                 let mut slice = &read[..];
                 let len_before = slice.len();
 
-                let value =
-                    fastnbt::from_reader_with_opts(&mut slice, DeOpts::network_nbt()).ok()?;
+                let value = fastnbt::from_reader_with_opts(&mut slice, DeOpts::network_nbt())
+                    .map_err(|e| ProtocolError::InvalidData(e.to_string()))?;
 
                 let bytes_read = len_before - slice.len();
                 read.advance(bytes_read);
@@ -45,7 +46,7 @@ impl RegistryDataClientboundPacket {
 
             entries.push(RegistryEntry { id: entry_id, data });
         }
-        Some(Self {
+        Ok(Self {
             id: registry_id,
             entries,
         })

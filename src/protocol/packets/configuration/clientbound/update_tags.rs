@@ -1,3 +1,4 @@
+use crate::protocol::error::ProtocolError;
 use crate::protocol::types::mcstring::McString;
 use crate::protocol::varint;
 use crate::protocol::{
@@ -17,24 +18,24 @@ pub struct UpdateTagsClientboundPacket {
 }
 
 impl UpdateTagsClientboundPacket {
-    pub fn decode(read: &mut BytesMut) -> Option<Self> {
-        let registry_count = varint::decode_mut(read).ok()? as usize;
+    pub fn decode(read: &mut BytesMut) -> Result<Self, ProtocolError> {
+        let registry_count = varint::decode_mut(read)? as usize;
         let mut registries = Vec::with_capacity(registry_count);
 
         for _ in 0..registry_count {
-            let registry_id = McString::decode(read).ok()?.0;
+            let registry_id = McString::decode(read)?.0;
 
-            let tag_count = varint::decode_mut(read).ok()? as usize;
+            let tag_count = varint::decode_mut(read)? as usize;
             let mut tags = Vec::with_capacity(tag_count);
 
             for _ in 0..tag_count {
-                let tag_name = McString::decode(read).ok()?.0;
+                let tag_name = McString::decode(read)?.0;
 
-                let entry_count = varint::decode_mut(read).ok()? as usize;
+                let entry_count = varint::decode_mut(read)? as usize;
                 let mut entries = Vec::with_capacity(entry_count);
 
                 for _ in 0..entry_count {
-                    entries.push(varint::decode_mut(read).ok()?);
+                    entries.push(varint::decode_mut(read)?);
                 }
 
                 tags.push(TagsField {
@@ -49,7 +50,7 @@ impl UpdateTagsClientboundPacket {
             });
         }
 
-        Some(Self { registries })
+        Ok(Self { registries })
     }
 }
 

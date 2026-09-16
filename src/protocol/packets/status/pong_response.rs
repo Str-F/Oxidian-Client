@@ -1,6 +1,8 @@
 use bytes::{Buf, BytesMut};
 
-use crate::protocol::{state::ConnectionState, traits::packet::ClientboundPacket};
+use crate::protocol::{
+    error::ProtocolError, state::ConnectionState, traits::packet::ClientboundPacket,
+};
 
 #[derive(Debug)]
 pub struct PongResponsePacket {
@@ -8,13 +10,13 @@ pub struct PongResponsePacket {
 }
 
 impl PongResponsePacket {
-    pub fn decode(data: &mut BytesMut) -> Option<Self> {
+    pub fn decode(data: &mut BytesMut) -> Result<Self, ProtocolError> {
         if data.len() < 8 {
-            return None;
+            return Err(ProtocolError::UnexpectedEof);
         }
 
         let timestamp = data.get_i64();
-        Some(Self { timestamp })
+        Ok(Self { timestamp })
     }
 }
 

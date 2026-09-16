@@ -1,6 +1,6 @@
 use bytes::BytesMut;
-use std::io::{Error, ErrorKind};
 
+use crate::protocol::error::ProtocolError;
 use crate::protocol::types::mcstring::McString;
 use crate::protocol::types::property::Property;
 use crate::protocol::varint;
@@ -13,22 +13,17 @@ pub struct GameProfile {
 }
 
 impl GameProfile {
-    pub fn decode(data: &mut BytesMut) -> Result<Self, Error> {
+    pub fn decode(data: &mut BytesMut) -> Result<Self, ProtocolError> {
         if data.len() < 16 {
-            return Err(Error::new(
-                ErrorKind::UnexpectedEof,
-                "Not enough data to read UUID",
-            ));
+            return Err(ProtocolError::UnexpectedEof);
         }
 
         let uuid = uuid::Uuid::from_slice(&data.split_to(16))
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "Invalid UUID"))?;
+            .map_err(|_| ProtocolError::InvalidData("Invalid UUID".to_string()))?;
 
         let name = McString::decode(data)?.0;
 
-        let properties_length = varint::decode(data)
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "Invalid property length"))?
-            .0 as usize;
+        let properties_length = varint::decode(data)?.0 as usize;
 
         let mut properties = Vec::new();
 

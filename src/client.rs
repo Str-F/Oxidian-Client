@@ -68,7 +68,8 @@ impl Client {
 
     pub async fn connect_server(&mut self) {
         let server = Server::new("localhost", 25565);
-        Registry::new();
+        self.registry = Registry::new();
+        self.tags = Tags::new();
 
         match NetworkManager::join_server(&server).await {
             Ok((command_sender, event_receiver)) => {
@@ -191,7 +192,6 @@ impl Client {
 
             Event::FinishConfiguration { packet } => {
                 println!("Received finish configuration packet: {:?}", packet);
-                self.stop();
                 let acknowledge_finish_configuration_packet = AcknowledgeFinishConfigurationPacket;
                 if let Some(command_sender) = &self.command_sender {
                     println!(
