@@ -219,6 +219,18 @@ impl NetworkManager {
                 println!("Changing State to Play");
                 self.connection.set_state(ConnectionState::Play);
             }
+            NetworkCommand::SendKeepAliveConfigurationPacket(keep_alive_configuration_packet) => {
+                if let Err(e) = self.connection.send(keep_alive_configuration_packet).await {
+                    eprintln!("Failed to send keep alive configuration packet: {}", e);
+                    return;
+                }
+            }
+            NetworkCommand::SendKeepAlivePlayPacket(keep_alive_play_packet) => {
+                if let Err(e) = self.connection.send(keep_alive_play_packet).await {
+                    eprintln!("Failed to send keep alive play packet: {}", e);
+                    return;
+                }
+            }
         }
     }
 }

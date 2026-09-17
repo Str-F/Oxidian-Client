@@ -1,8 +1,10 @@
 use crate::protocol::packets::configuration::clientbound::finish_configuration::FinishConfigurationPacket;
+use crate::protocol::packets::configuration::clientbound::keep_alive_configuration::KeepAliveClientboundConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::registry_data::RegistryDataClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
+use crate::protocol::packets::play::clientbound::keep_alive_play::KeepAliveClientboundPlayPacket;
 use bytes::BytesMut;
 
 use crate::protocol::state::ConnectionState;
@@ -33,6 +35,14 @@ pub enum Event {
     },
     UpdateTags {
         packet: UpdateTagsClientboundPacket,
+    },
+
+    KeepAliveConfiguration {
+        packet: KeepAliveClientboundConfigurationPacket,
+    },
+
+    KeepAlivePlay {
+        packet: KeepAliveClientboundPlayPacket,
     },
 }
 
@@ -73,6 +83,10 @@ impl PacketDispatcher {
                 3 => Ok(Event::FinishConfiguration {
                     packet: FinishConfigurationPacket,
                 }),
+                4 => Ok(Event::KeepAliveConfiguration {
+                    packet: KeepAliveClientboundConfigurationPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 7 => Ok(Event::RegistryData {
                     packet: RegistryDataClientboundPacket::decode(data)
                         .map_err(|_| Error::UnknownPacket)?,
@@ -95,6 +109,10 @@ impl PacketDispatcher {
                 }
             },
             ConnectionState::Play => match id {
+                44 => Ok(Event::KeepAlivePlay {
+                    packet: KeepAliveClientboundPlayPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 _ => {
                     println!("Unknwon play state packet: id: {}, data: {:?}", id, data);
                     Err(Error::UnknownPacket)

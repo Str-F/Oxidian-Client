@@ -2,8 +2,10 @@ use crate::network::command::NetworkCommand;
 use crate::network::manager::NetworkManager;
 use crate::protocol::dispatcher::Event;
 use crate::protocol::packets::configuration::serverbound::acknowledge_finish_configuration::AcknowledgeFinishConfigurationPacket;
+use crate::protocol::packets::configuration::serverbound::keep_alive_configuration::KeepAliveServerboundConfigurationPacket;
 use crate::protocol::packets::configuration::serverbound::known_packs::KnownPacksServerboundPacket;
 use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
+use crate::protocol::packets::play::serverbound::keep_alive_play::KeepAliveServerboundPlayPacket;
 use crate::protocol::registry::Registry;
 use crate::protocol::tags::Tags;
 use crate::server::Server;
@@ -207,6 +209,35 @@ impl Client {
                             "Failed to send acknowledge finish configuration packet: {}",
                             e
                         );
+                    }
+                }
+            }
+
+            Event::KeepAliveConfiguration { packet } => {
+                println!("Received keep alive configuration packet: {:?}", packet);
+                let keep_alive_packet = KeepAliveServerboundConfigurationPacket::new(packet.id);
+                if let Some(command_sender) = &self.command_sender {
+                    println!(
+                        "Sending keep alive configuration packet: {:?}",
+                        keep_alive_packet
+                    );
+                    if let Err(e) = command_sender.try_send(
+                        NetworkCommand::SendKeepAliveConfigurationPacket(keep_alive_packet),
+                    ) {
+                        eprintln!("Failed to send keep alive configuration packet: {}", e);
+                    }
+                }
+            }
+
+            Event::KeepAlivePlay { packet } => {
+                println!("Received keep alive play packet: {:?}", packet);
+                let keep_alive_packet = KeepAliveServerboundPlayPacket::new(packet.id);
+                if let Some(command_sender) = &self.command_sender {
+                    println!("Sending keep alive play packet: {:?}", keep_alive_packet);
+                    if let Err(e) = command_sender
+                        .try_send(NetworkCommand::SendKeepAlivePlayPacket(keep_alive_packet))
+                    {
+                        eprintln!("Failed to send keep alive play packet: {}", e);
                     }
                 }
             }
