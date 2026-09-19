@@ -231,6 +231,12 @@ impl NetworkManager {
                     return;
                 }
             }
+            NetworkCommand::SendConfirmTeleportationPacket(confirm_teleportation_packet) => {
+                if let Err(e) = self.connection.send(confirm_teleportation_packet).await {
+                    eprintln!("Failed to send confirm teleportation packet: {}", e);
+                    return;
+                }
+            }
         }
     }
 }

@@ -5,6 +5,8 @@ use crate::protocol::packets::configuration::clientbound::registry_data::Registr
 use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
 use crate::protocol::packets::login::login_success::LoginSuccessPacket;
 use crate::protocol::packets::play::clientbound::keep_alive_play::KeepAliveClientboundPlayPacket;
+use crate::protocol::packets::play::clientbound::login::LoginClientboundPacket;
+use crate::protocol::packets::play::clientbound::player_position::SynchronizePlayerClientboundPacket;
 use bytes::BytesMut;
 
 use crate::protocol::state::ConnectionState;
@@ -21,7 +23,6 @@ pub enum Event {
     SetCompression,
     LoginPluginRequest,
     CookieRequest,
-
     PluginMessage,
     FinishConfiguration {
         packet: FinishConfigurationPacket,
@@ -36,13 +37,19 @@ pub enum Event {
     UpdateTags {
         packet: UpdateTagsClientboundPacket,
     },
-
     KeepAliveConfiguration {
         packet: KeepAliveClientboundConfigurationPacket,
     },
 
+    //play state packets
     KeepAlivePlay {
         packet: KeepAliveClientboundPlayPacket,
+    },
+    Login {
+        packet: LoginClientboundPacket,
+    },
+    SynchronizePlayerPosition {
+        packet: SynchronizePlayerClientboundPacket,
     },
 }
 
@@ -111,6 +118,14 @@ impl PacketDispatcher {
             ConnectionState::Play => match id {
                 44 => Ok(Event::KeepAlivePlay {
                     packet: KeepAliveClientboundPlayPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
+                49 => Ok(Event::Login {
+                    packet: LoginClientboundPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
+                72 => Ok(Event::SynchronizePlayerPosition {
+                    packet: SynchronizePlayerClientboundPacket::decode(data)
                         .map_err(|_| Error::UnknownPacket)?,
                 }),
                 _ => {

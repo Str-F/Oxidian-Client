@@ -1,3 +1,4 @@
+use crate::protocol::packets::play::serverbound::accept_teleportation::ConfirmTeleportationServerboundPacket;
 use crate::protocol::packets::play::serverbound::keep_alive_play::KeepAliveServerboundPlayPacket;
 use crate::protocol::packets::{
     configuration::serverbound::{
@@ -14,4 +15,5 @@ pub enum NetworkCommand {
     SendAcknowledgeFinishConfigurationPacket(AcknowledgeFinishConfigurationPacket),
     SendKeepAliveConfigurationPacket(KeepAliveServerboundConfigurationPacket),
     SendKeepAlivePlayPacket(KeepAliveServerboundPlayPacket),
+    SendConfirmTeleportationPacket(ConfirmTeleportationServerboundPacket),
 }

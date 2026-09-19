@@ -5,6 +5,7 @@ use crate::protocol::packets::configuration::serverbound::acknowledge_finish_con
 use crate::protocol::packets::configuration::serverbound::keep_alive_configuration::KeepAliveServerboundConfigurationPacket;
 use crate::protocol::packets::configuration::serverbound::known_packs::KnownPacksServerboundPacket;
 use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
+use crate::protocol::packets::play::serverbound::accept_teleportation::ConfirmTeleportationServerboundPacket;
 use crate::protocol::packets::play::serverbound::keep_alive_play::KeepAliveServerboundPlayPacket;
 use crate::protocol::registry::Registry;
 use crate::protocol::tags::Tags;
@@ -238,6 +239,25 @@ impl Client {
                         .try_send(NetworkCommand::SendKeepAlivePlayPacket(keep_alive_packet))
                     {
                         eprintln!("Failed to send keep alive play packet: {}", e);
+                    }
+                }
+            }
+            Event::Login { packet } => {
+                println!("Received login packet: {:?}", packet);
+            }
+            Event::SynchronizePlayerPosition { packet } => {
+                println!("Received synchronize player position packet: {:?}", packet);
+                let accept_teleportation_packet =
+                    ConfirmTeleportationServerboundPacket::new(packet.teleport_id);
+                if let Some(command_sender) = &self.command_sender {
+                    println!(
+                        "Sending confirm teleportation packet: {:?}",
+                        accept_teleportation_packet
+                    );
+                    if let Err(e) = command_sender.try_send(
+                        NetworkCommand::SendConfirmTeleportationPacket(accept_teleportation_packet),
+                    ) {
+                        eprintln!("Failed to send confirm teleportation packet: {}", e);
                     }
                 }
             }
