@@ -6,7 +6,7 @@ use crate::protocol::packets::{
         keep_alive_configuration::KeepAliveServerboundConfigurationPacket,
         known_packs::KnownPacksServerboundPacket,
     },
-    login::login_acknowledged::LoginAcknowledgedPacket,
+    login::serverbound::login_acknowledged::LoginAcknowledgedPacket,
 };
 
 pub enum NetworkCommand {

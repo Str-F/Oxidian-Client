@@ -1,9 +1,12 @@
+use crate::protocol::packets::configuration::clientbound::disconnect::DisconnectConfigurationClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::finish_configuration::FinishConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::keep_alive_configuration::KeepAliveClientboundConfigurationPacket;
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::registry_data::RegistryDataClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
-use crate::protocol::packets::login::login_success::LoginSuccessPacket;
+use crate::protocol::packets::login::clientbound::login_disconnect::DisconnectLoginClientboundPacket;
+use crate::protocol::packets::login::clientbound::login_success::LoginSuccessPacket;
+use crate::protocol::packets::play::clientbound::disconnect::DisconnectPlayClientboundPacket;
 use crate::protocol::packets::play::clientbound::keep_alive_play::KeepAliveClientboundPlayPacket;
 use crate::protocol::packets::play::clientbound::login::LoginClientboundPacket;
 use crate::protocol::packets::play::clientbound::player_position::SynchronizePlayerClientboundPacket;
@@ -15,7 +18,9 @@ pub struct PacketDispatcher {}
 
 #[derive(Debug)]
 pub enum Event {
-    LoginDisconnect,
+    DisconnectLogin {
+        packet: DisconnectLoginClientboundPacket,
+    },
     EncryptionRequest,
     LoginSuccess {
         packet: LoginSuccessPacket,
@@ -40,6 +45,9 @@ pub enum Event {
     KeepAliveConfiguration {
         packet: KeepAliveClientboundConfigurationPacket,
     },
+    DisconnectConfiguration {
+        packet: DisconnectConfigurationClientboundPacket,
+    },
 
     //play state packets
     KeepAlivePlay {
@@ -50,6 +58,9 @@ pub enum Event {
     },
     SynchronizePlayerPosition {
         packet: SynchronizePlayerClientboundPacket,
+    },
+    DisconnectPlay {
+        packet: DisconnectPlayClientboundPacket,
     },
 }
 
@@ -72,7 +83,10 @@ impl PacketDispatcher {
     ) -> Result<Event, Error> {
         match state {
             ConnectionState::Login => match id {
-                0 => Ok(Event::LoginDisconnect),
+                0 => Ok(Event::DisconnectLogin {
+                    packet: DisconnectLoginClientboundPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 1 => Ok(Event::EncryptionRequest),
                 2 => Ok(Event::LoginSuccess {
                     packet: LoginSuccessPacket::decode(data).map_err(|_| Error::UnknownPacket)?,
@@ -87,6 +101,10 @@ impl PacketDispatcher {
             },
             ConnectionState::Configuration => match id {
                 1 => Ok(Event::PluginMessage),
+                2 => Ok(Event::DisconnectConfiguration {
+                    packet: DisconnectConfigurationClientboundPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 3 => Ok(Event::FinishConfiguration {
                     packet: FinishConfigurationPacket,
                 }),
@@ -116,6 +134,10 @@ impl PacketDispatcher {
                 }
             },
             ConnectionState::Play => match id {
+                32 => Ok(Event::DisconnectPlay {
+                    packet: DisconnectPlayClientboundPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 44 => Ok(Event::KeepAlivePlay {
                     packet: KeepAliveClientboundPlayPacket::decode(data)
                         .map_err(|_| Error::UnknownPacket)?,

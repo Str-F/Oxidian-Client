@@ -4,7 +4,7 @@ use crate::protocol::dispatcher::Event;
 use crate::protocol::packets::configuration::serverbound::acknowledge_finish_configuration::AcknowledgeFinishConfigurationPacket;
 use crate::protocol::packets::configuration::serverbound::keep_alive_configuration::KeepAliveServerboundConfigurationPacket;
 use crate::protocol::packets::configuration::serverbound::known_packs::KnownPacksServerboundPacket;
-use crate::protocol::packets::login::login_acknowledged::LoginAcknowledgedPacket;
+use crate::protocol::packets::login::serverbound::login_acknowledged::LoginAcknowledgedPacket;
 use crate::protocol::packets::play::serverbound::accept_teleportation::ConfirmTeleportationServerboundPacket;
 use crate::protocol::packets::play::serverbound::keep_alive_play::KeepAliveServerboundPlayPacket;
 use crate::protocol::registry::Registry;
@@ -143,11 +143,6 @@ impl Client {
                 }
             }
 
-            Event::LoginDisconnect => {
-                println!("Received login disconnect packet");
-                println!("Disconnected during login");
-            }
-
             Event::KnownPacks { packet } => {
                 println!("Received known packs packet: {:?}", packet);
                 let known_packs_packet = KnownPacksServerboundPacket::new(packet.packs);
@@ -260,6 +255,24 @@ impl Client {
                         eprintln!("Failed to send confirm teleportation packet: {}", e);
                     }
                 }
+            }
+            Event::DisconnectLogin { packet } => {
+                println!("Received disconnect login packet: {:?}", packet.reason);
+                println!("Disconnected during login");
+                self.running = false;
+            }
+            Event::DisconnectConfiguration { packet } => {
+                println!(
+                    "Received disconnect configuration packet: {:?}",
+                    packet.reason
+                );
+                println!("Disconnected during configuration");
+                self.running = false;
+            }
+            Event::DisconnectPlay { packet } => {
+                println!("Received disconnect play packet: {:?}", packet.reason);
+                println!("Disconnected during play");
+                self.running = false;
             }
             _ => {
                 println!("Unhandled event: {:?}", event);

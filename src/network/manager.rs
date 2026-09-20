@@ -9,7 +9,7 @@ use crate::protocol::packets::status::{
 };
 use crate::protocol::packets::{
     handshake::{ClientIntent, HandshakePacket},
-    login::login_start::LoginStartPacket,
+    login::serverbound::login_start::LoginStartPacket,
 };
 use crate::protocol::state::ConnectionState;
 use crate::protocol::traits::packet::ClientboundPacket;
