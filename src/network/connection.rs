@@ -9,6 +9,7 @@ pub struct Connection {
     stream: TcpStream,
     state: ConnectionState,
     buffer: BytesMut,
+    compression_threshold: Option<i32>,
 }
 
 impl Connection {
@@ -18,6 +19,7 @@ impl Connection {
             stream,
             state: ConnectionState::Handshaking,
             buffer: BytesMut::new(),
+            compression_threshold: None,
         })
     }
 
@@ -27,6 +29,16 @@ impl Connection {
 
     pub fn state(&self) -> ConnectionState {
         self.state
+    }
+
+    pub fn set_compression_threshold(&mut self, threshold: i32) {
+        if threshold < 0 {
+            self.compression_threshold = None;
+            println!("Disabling compression");
+        } else {
+            self.compression_threshold = Some(threshold);
+            println!("Setting compression threshold to: {}", threshold);
+        }
     }
 
     pub async fn send<P: ServerboundPacket>(&mut self, packet_data: P) -> Result<(), Error> {
@@ -40,7 +52,11 @@ impl Connection {
                 ),
             ));
         }
-        let data = packet::encode(P::id(), &packet_data.encode_data());
+        let data = packet::encode(
+            P::id(),
+            &packet_data.encode_data(),
+            self.compression_threshold,
+        )?;
         println!("Sending packet id: {}", P::id());
         println!("{:02X?}", data);
         self.stream.write_all(&data).await?;
@@ -62,7 +78,7 @@ impl Connection {
 
     pub async fn read_packet(&mut self) -> Result<(i32, BytesMut), Error> {
         loop {
-            if let Some(packet) = packet::decode(&mut self.buffer)? {
+            if let Some(packet) = packet::decode(&mut self.buffer, self.compression_threshold)? {
                 return Ok(packet);
             }
 

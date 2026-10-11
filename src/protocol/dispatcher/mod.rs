@@ -4,6 +4,7 @@ use crate::protocol::packets::configuration::clientbound::keep_alive_configurati
 use crate::protocol::packets::configuration::clientbound::known_packs::KnownPacksClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::registry_data::RegistryDataClientboundPacket;
 use crate::protocol::packets::configuration::clientbound::update_tags::UpdateTagsClientboundPacket;
+use crate::protocol::packets::login::clientbound::login_compression::SetCompressionClientboundPacket;
 use crate::protocol::packets::login::clientbound::login_disconnect::DisconnectLoginClientboundPacket;
 use crate::protocol::packets::login::clientbound::login_success::LoginSuccessPacket;
 use crate::protocol::packets::play::clientbound::disconnect::DisconnectPlayClientboundPacket;
@@ -25,7 +26,9 @@ pub enum Event {
     LoginSuccess {
         packet: LoginSuccessPacket,
     },
-    SetCompression,
+    SetCompression {
+        packet: SetCompressionClientboundPacket,
+    },
     LoginPluginRequest,
     CookieRequest,
     PluginMessage,
@@ -91,7 +94,10 @@ impl PacketDispatcher {
                 2 => Ok(Event::LoginSuccess {
                     packet: LoginSuccessPacket::decode(data).map_err(|_| Error::UnknownPacket)?,
                 }),
-                3 => Ok(Event::SetCompression),
+                3 => Ok(Event::SetCompression {
+                    packet: SetCompressionClientboundPacket::decode(data)
+                        .map_err(|_| Error::UnknownPacket)?,
+                }),
                 4 => Ok(Event::LoginPluginRequest),
                 5 => Ok(Event::CookieRequest),
                 _ => {

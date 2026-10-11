@@ -162,6 +162,10 @@ impl NetworkManager {
                                 &mut packet_data,
                             ) {
                                 Ok(event) => {
+                                    if let Event::SetCompression { packet } = &event {
+                                        self.connection.set_compression_threshold(packet.threshold);
+                                    }
+
                                     if let Err(e) = event_sender.send(event).await {
                                         eprintln!("Failed to send event: {}", e);
                                         break;

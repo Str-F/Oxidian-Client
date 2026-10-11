@@ -274,6 +274,7 @@ impl Client {
                 println!("Disconnected during play");
                 self.running = false;
             }
+            Event::SetCompression { packet } => {}
             _ => {
                 println!("Unhandled event: {:?}", event);
             }
