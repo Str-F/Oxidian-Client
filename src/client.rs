@@ -10,6 +10,7 @@ use crate::protocol::packets::play::serverbound::keep_alive_play::KeepAliveServe
 use crate::protocol::registry::Registry;
 use crate::protocol::tags::Tags;
 use crate::server::Server;
+use log::{debug, error, info, warn};
 use tokio::sync::mpsc;
 
 pub const PROTOCOL_VER: i32 = 776;
@@ -54,11 +55,43 @@ impl Client {
 
         match NetworkManager::get_status_server(&server).await {
             Ok(status) => {
-                println!("Server status: {:?}", status.0);
-                println!("Server ping: {}", status.1);
+                match serde_json::from_str::<serde_json::Value>(&status.0.json_response) {
+                    Ok(json) => {
+                        let version_name = json["version"]["name"].as_str().unwrap_or("Unknown");
+                        let version_protocol = json["version"]["protocol"].as_i64().unwrap_or(0);
+                        let players_online = json["players"]["online"].as_u64().unwrap_or(0);
+                        let players_max = json["players"]["max"].as_u64().unwrap_or(0);
+                        let players_sample: Vec<String> = json["players"]["sample"]
+                            .as_array()
+                            .map(|a| {
+                                a.iter()
+                                    .map(|p| p["name"].as_str().unwrap_or("Unknown").to_string())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        let description = json["description"]
+                            .as_str()
+                            .or_else(|| json["description"]["text"].as_str())
+                            .unwrap_or("No description");
+
+                        info!(
+                            "Server: {}/{} | {}/{} players | {} | sample: {:?}",
+                            version_name,
+                            version_protocol,
+                            players_online,
+                            players_max,
+                            description,
+                            players_sample
+                        );
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse status JSON: {}", e);
+                    }
+                }
+                info!("Server ping: {} ms", status.1);
             }
             Err(e) => {
-                eprintln!(
+                error!(
                     "Failed to get server status: {}:{} - {}",
                     server.host(),
                     server.port(),
@@ -78,10 +111,10 @@ impl Client {
             Ok((command_sender, event_receiver)) => {
                 self.command_sender = Some(command_sender);
                 self.event_receiver = Some(event_receiver);
-                println!("Connected to server: {}:{}", server.host(), server.port());
+                info!("Connected to server: {}:{}", server.host(), server.port());
             }
             Err(e) => {
-                eprintln!(
+                error!(
                     "Failed to connect to server: {}:{} - {}",
                     server.host(),
                     server.port(),
@@ -102,7 +135,7 @@ impl Client {
                     }
                     Err(mpsc::error::TryRecvError::Empty) => break,
                     Err(mpsc::error::TryRecvError::Disconnected) => {
-                        eprintln!("Event channel disconnected");
+                        error!("Event channel disconnected");
                         self.running = false;
                         break;
                     }
@@ -111,7 +144,6 @@ impl Client {
         }
 
         for event in events {
-            //println!("Received event: {:?}", event);
             self.handle_event(event);
         }
     }
@@ -119,45 +151,45 @@ impl Client {
     pub fn handle_event(&mut self, event: Event) {
         match event {
             Event::LoginSuccess { packet } => {
-                println!("Handling packet: {:?}", packet);
-                println!(
+                debug!("Handling packet: {:?}", packet);
+                info!(
                     "Logged in as: UUID: {}, Username: {}",
                     packet.profile.uuid, packet.profile.name
                 );
-                println!("Session ID: {}", packet.session_id);
-                println!("Profile Properties:");
+                debug!("Session ID: {}", packet.session_id);
+                debug!("Profile Properties:");
                 for property in packet.profile.properties {
-                    println!(
+                    debug!(
                         "  Name: {}, Value: {}, Signature: {:?}",
                         property.name, property.value, property.signature
                     );
                 }
                 let login_ack_packet = LoginAcknowledgedPacket::new();
                 if let Some(command_sender) = &self.command_sender {
-                    println!("Sending login acknowledged packet: {:?}", login_ack_packet);
+                    debug!("Sending login acknowledged packet: {:?}", login_ack_packet);
                     if let Err(e) = command_sender.try_send(
                         NetworkCommand::SendLoginAcknowledgedPacket(login_ack_packet),
                     ) {
-                        eprintln!("Failed to send login acknowledged packet: {}", e);
+                        error!("Failed to send login acknowledged packet: {}", e);
                     }
                 }
             }
 
             Event::KnownPacks { packet } => {
-                println!("Received known packs packet: {:?}", packet);
+                debug!("Received known packs packet: {:?}", packet);
                 let known_packs_packet = KnownPacksServerboundPacket::new(packet.packs);
                 if let Some(command_sender) = &self.command_sender {
-                    println!("Sending known packs packet: {:?}", known_packs_packet);
+                    debug!("Sending known packs packet: {:?}", known_packs_packet);
                     if let Err(e) = command_sender
                         .try_send(NetworkCommand::SendKnownPacksPacket(known_packs_packet))
                     {
-                        eprintln!("Failed to send known packs packet: {}", e);
+                        error!("Failed to send known packs packet: {}", e);
                     }
                 }
             }
 
             Event::RegistryData { packet } => {
-                println!(
+                debug!(
                     "Received registry data packet: {:?} with {} entries",
                     packet.id,
                     packet.entries.len()
@@ -167,7 +199,7 @@ impl Client {
             }
 
             Event::UpdateTags { packet } => {
-                println!(
+                debug!(
                     "Received update tags packet: {:?} with {} entries",
                     packet
                         .registries
@@ -189,10 +221,10 @@ impl Client {
             }
 
             Event::FinishConfiguration { packet } => {
-                println!("Received finish configuration packet: {:?}", packet);
+                debug!("Received finish configuration packet: {:?}", packet);
                 let acknowledge_finish_configuration_packet = AcknowledgeFinishConfigurationPacket;
                 if let Some(command_sender) = &self.command_sender {
-                    println!(
+                    debug!(
                         "Sending acknowledge finish configuration packet: {:?}",
                         acknowledge_finish_configuration_packet
                     );
@@ -201,7 +233,7 @@ impl Client {
                             acknowledge_finish_configuration_packet,
                         ),
                     ) {
-                        eprintln!(
+                        error!(
                             "Failed to send acknowledge finish configuration packet: {}",
                             e
                         );
@@ -210,73 +242,77 @@ impl Client {
             }
 
             Event::KeepAliveConfiguration { packet } => {
-                println!("Received keep alive configuration packet: {:?}", packet);
+                debug!("Received keep alive configuration packet: {:?}", packet);
                 let keep_alive_packet = KeepAliveServerboundConfigurationPacket::new(packet.id);
                 if let Some(command_sender) = &self.command_sender {
-                    println!(
+                    debug!(
                         "Sending keep alive configuration packet: {:?}",
                         keep_alive_packet
                     );
                     if let Err(e) = command_sender.try_send(
                         NetworkCommand::SendKeepAliveConfigurationPacket(keep_alive_packet),
                     ) {
-                        eprintln!("Failed to send keep alive configuration packet: {}", e);
+                        error!("Failed to send keep alive configuration packet: {}", e);
                     }
                 }
             }
 
             Event::KeepAlivePlay { packet } => {
-                println!("Received keep alive play packet: {:?}", packet);
+                debug!("Received keep alive play packet: {:?}", packet);
                 let keep_alive_packet = KeepAliveServerboundPlayPacket::new(packet.id);
                 if let Some(command_sender) = &self.command_sender {
-                    println!("Sending keep alive play packet: {:?}", keep_alive_packet);
+                    debug!("Sending keep alive play packet: {:?}", keep_alive_packet);
                     if let Err(e) = command_sender
                         .try_send(NetworkCommand::SendKeepAlivePlayPacket(keep_alive_packet))
                     {
-                        eprintln!("Failed to send keep alive play packet: {}", e);
+                        error!("Failed to send keep alive play packet: {}", e);
                     }
                 }
             }
             Event::Login { packet } => {
-                println!("Received login packet: {:?}", packet);
+                debug!("Received login packet: {:?}", packet);
+                info!(
+                    "Joined: dimension: {} | game mode: {}",
+                    packet.dimension_name, packet.game_mode
+                );
             }
             Event::SynchronizePlayerPosition { packet } => {
-                println!("Received synchronize player position packet: {:?}", packet);
+                debug!("Received synchronize player position packet: {:?}", packet);
                 let accept_teleportation_packet =
                     ConfirmTeleportationServerboundPacket::new(packet.teleport_id);
                 if let Some(command_sender) = &self.command_sender {
-                    println!(
+                    debug!(
                         "Sending confirm teleportation packet: {:?}",
                         accept_teleportation_packet
                     );
                     if let Err(e) = command_sender.try_send(
                         NetworkCommand::SendConfirmTeleportationPacket(accept_teleportation_packet),
                     ) {
-                        eprintln!("Failed to send confirm teleportation packet: {}", e);
+                        error!("Failed to send confirm teleportation packet: {}", e);
                     }
                 }
             }
             Event::DisconnectLogin { packet } => {
-                println!("Received disconnect login packet: {:?}", packet.reason);
-                println!("Disconnected during login");
+                warn!("Received disconnect login packet: {:?}", packet.reason);
+                info!("Disconnected during login");
                 self.running = false;
             }
             Event::DisconnectConfiguration { packet } => {
-                println!(
+                warn!(
                     "Received disconnect configuration packet: {:?}",
                     packet.reason
                 );
-                println!("Disconnected during configuration");
+                info!("Disconnected during configuration");
                 self.running = false;
             }
             Event::DisconnectPlay { packet } => {
-                println!("Received disconnect play packet: {:?}", packet.reason);
-                println!("Disconnected during play");
+                warn!("Received disconnect play packet: {:?}", packet.reason);
+                info!("Disconnected during play");
                 self.running = false;
             }
-            Event::SetCompression { packet } => {}
+            Event::SetCompression { .. } => {}
             _ => {
-                println!("Unhandled event: {:?}", event);
+                debug!("Unhandled event: {:?}", event);
             }
         }
     }

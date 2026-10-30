@@ -1,7 +1,7 @@
 use crate::client;
 use crate::network::command::NetworkCommand;
 use crate::network::connection::Connection;
-use crate::protocol::dispatcher::{Event, PacketDispatcher};
+use crate::protocol::dispatcher::{Error as DispatchError, Event, PacketDispatcher};
 use crate::protocol::packets::status::ping_request::START_TIME;
 use crate::protocol::packets::status::{
     ping_request::PingRequestPacket, pong_response::PongResponsePacket,
@@ -16,6 +16,7 @@ use crate::protocol::traits::packet::ClientboundPacket;
 use crate::server::Server;
 use std::io::ErrorKind;
 
+use log::{debug, error, warn};
 use std::io::Error;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -36,16 +37,16 @@ impl NetworkManager {
             ClientIntent::Status,
         );
 
-        println!("Sending handshake packet to server: {:?}", handshake);
+        debug!("Sending handshake packet to server: {:?}", handshake);
 
         connection.send(handshake).await?;
 
         connection.set_state(ConnectionState::Status);
-        println!("Changed connection state to Status");
+        debug!("Changed connection state to Status");
 
         let status_request_packet = StatusRequestPacket::new();
 
-        println!(
+        debug!(
             "Sending status request packet to server: {:?}",
             status_request_packet
         );
@@ -58,7 +59,7 @@ impl NetworkManager {
             if let Ok(status_response_packet) = StatusResponsePacket::decode(&mut packet_data) {
                 let ping_request_packet = PingRequestPacket::new();
 
-                println!(
+                debug!(
                     "Sending ping request packet to server: {:?}",
                     ping_request_packet
                 );
@@ -71,21 +72,21 @@ impl NetworkManager {
 
                 if packet_id == PongResponsePacket::id() {
                     if let Ok(pong) = PongResponsePacket::decode(&mut packet_data) {
-                        println!("Received pong response packet: {:?}", packet_data);
+                        debug!("Received pong response packet: {:?}", packet_data);
 
                         let now = START_TIME.elapsed().as_millis() as i64;
                         latency_ms = (now - pong.timestamp) as i32;
 
-                        println!("Ping response time: {} ms", latency_ms);
+                        debug!("Ping response time: {} ms", latency_ms);
                     }
                 }
 
                 match connection.read_packet().await {
                     Ok((packet_id, _)) => {
-                        println!("Received unexpected packet after ping: {:?}", packet_id);
+                        debug!("Received unexpected packet after ping: {:?}", packet_id);
                     }
                     Err(e) => {
-                        println!("Connection closed as expected: {}", e);
+                        debug!("Connection closed as expected: {}", e);
                     }
                 }
 
@@ -111,17 +112,17 @@ impl NetworkManager {
             ClientIntent::Login,
         );
 
-        println!("Sending handshake packet to server: {:?}", handshake);
+        debug!("Sending handshake packet to server: {:?}", handshake);
 
         connection.send(handshake).await?;
 
         connection.set_state(ConnectionState::Login);
-        println!("Changed connection state to Login");
+        debug!("Changed connection state to Login");
 
         let login_start_packet =
             LoginStartPacket::new(client::USERNAME.to_string(), Uuid::new_v4());
 
-        println!(
+        debug!(
             "Sending login start packet to server: {:?}",
             login_start_packet
         );
@@ -167,20 +168,28 @@ impl NetworkManager {
                                     }
 
                                     if let Err(e) = event_sender.send(event).await {
-                                        eprintln!("Failed to send event: {}", e);
+                                        error!("Failed to send event: {}", e);
                                         break;
                                     }
                                 }
-                                Err(e) => {
-                                    eprintln!("Failed to dispatch packet: {} , Error: {:?}", packet_id, e);
+                                Err(e) => match e {
+                                    DispatchError::UnknownPacket => {
+                                        debug!("Unknown packet id received: {}", packet_id);
+                                    }
+                                    DispatchError::InvalidState => {
+                                        warn!("Packet id {} in invalid state", packet_id);
+                                    }
+                                    DispatchError::FailedDecode => {
+                                        warn!("Failed to decode packet id {} ({} bytes)", packet_id, packet_data.len());
+                                    }
                                 }
                             }
                         }
                         Err(e) => {
                             if self.connection.state() == ConnectionState::Status {
-                                println!("Server closed connection as expected (Status complete).");
+                                debug!("Server closed connection as expected (Status complete).");
                             } else {
-                                eprintln!("Connection closed unexpectedly: {}", e);
+                                error!("Connection closed unexpectedly: {}", e);
                             }
                             break;
                         }
@@ -194,15 +203,15 @@ impl NetworkManager {
         match command {
             NetworkCommand::SendLoginAcknowledgedPacket(login_ack_packet) => {
                 if let Err(e) = self.connection.send(login_ack_packet).await {
-                    eprintln!("Failed to send login acknowledged packet: {}", e);
+                    error!("Failed to send login acknowledged packet: {}", e);
                     return;
                 }
-                println!("Changing State to Configuration");
+                debug!("Changed State to Configuration");
                 self.connection.set_state(ConnectionState::Configuration);
             }
             NetworkCommand::SendKnownPacksPacket(known_packs_packet) => {
                 if let Err(e) = self.connection.send(known_packs_packet).await {
-                    eprintln!("Failed to send known packs packet: {}", e);
+                    error!("Failed to send known packs packet: {}", e);
                     return;
                 }
             }
@@ -214,30 +223,30 @@ impl NetworkManager {
                     .send(acknowledge_finish_configuration_packet)
                     .await
                 {
-                    eprintln!(
+                    error!(
                         "Failed to send acknowledge finish configuration packet: {}",
                         e
                     );
                     return;
                 }
-                println!("Changing State to Play");
+                debug!("Changed State to Play");
                 self.connection.set_state(ConnectionState::Play);
             }
             NetworkCommand::SendKeepAliveConfigurationPacket(keep_alive_configuration_packet) => {
                 if let Err(e) = self.connection.send(keep_alive_configuration_packet).await {
-                    eprintln!("Failed to send keep alive configuration packet: {}", e);
+                    error!("Failed to send keep alive configuration packet: {}", e);
                     return;
                 }
             }
             NetworkCommand::SendKeepAlivePlayPacket(keep_alive_play_packet) => {
                 if let Err(e) = self.connection.send(keep_alive_play_packet).await {
-                    eprintln!("Failed to send keep alive play packet: {}", e);
+                    error!("Failed to send keep alive play packet: {}", e);
                     return;
                 }
             }
             NetworkCommand::SendConfirmTeleportationPacket(confirm_teleportation_packet) => {
                 if let Err(e) = self.connection.send(confirm_teleportation_packet).await {
-                    eprintln!("Failed to send confirm teleportation packet: {}", e);
+                    error!("Failed to send confirm teleportation packet: {}", e);
                     return;
                 }
             }

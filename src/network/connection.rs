@@ -1,5 +1,7 @@
 use crate::protocol::{packet, state::ConnectionState, traits::packet::ServerboundPacket};
 use bytes::BytesMut;
+use log::debug;
+use log::trace;
 use std::io::Error;
 use std::io::ErrorKind;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -34,10 +36,10 @@ impl Connection {
     pub fn set_compression_threshold(&mut self, threshold: i32) {
         if threshold < 0 {
             self.compression_threshold = None;
-            println!("Disabling compression");
+            debug!("Disabling compression");
         } else {
             self.compression_threshold = Some(threshold);
-            println!("Setting compression threshold to: {}", threshold);
+            debug!("Setting compression threshold to: {}", threshold);
         }
     }
 
@@ -57,8 +59,8 @@ impl Connection {
             &packet_data.encode_data(),
             self.compression_threshold,
         )?;
-        println!("Sending packet id: {}", P::id());
-        println!("{:02X?}", data);
+        debug!("Sending packet id: {}", P::id());
+        trace!("{:02X?}", data);
         self.stream.write_all(&data).await?;
         Ok(())
     }

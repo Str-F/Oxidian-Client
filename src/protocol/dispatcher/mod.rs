@@ -12,6 +12,7 @@ use crate::protocol::packets::play::clientbound::keep_alive_play::KeepAliveClien
 use crate::protocol::packets::play::clientbound::login::LoginClientboundPacket;
 use crate::protocol::packets::play::clientbound::player_position::SynchronizePlayerClientboundPacket;
 use bytes::BytesMut;
+use log::trace;
 
 use crate::protocol::state::ConnectionState;
 
@@ -71,6 +72,7 @@ pub enum Event {
 pub enum Error {
     UnknownPacket,
     InvalidState,
+    FailedDecode,
 }
 
 impl PacketDispatcher {
@@ -88,20 +90,20 @@ impl PacketDispatcher {
             ConnectionState::Login => match id {
                 0 => Ok(Event::DisconnectLogin {
                     packet: DisconnectLoginClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 1 => Ok(Event::EncryptionRequest),
                 2 => Ok(Event::LoginSuccess {
-                    packet: LoginSuccessPacket::decode(data).map_err(|_| Error::UnknownPacket)?,
+                    packet: LoginSuccessPacket::decode(data).map_err(|_| Error::FailedDecode)?,
                 }),
                 3 => Ok(Event::SetCompression {
                     packet: SetCompressionClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 4 => Ok(Event::LoginPluginRequest),
                 5 => Ok(Event::CookieRequest),
                 _ => {
-                    println!("Unknwon login state packet: id: {}, data: {:?}", id, data);
+                    trace!("Unknown login state packet: id: {}, data: {:?}", id, data);
                     Err(Error::UnknownPacket)
                 }
             },
@@ -109,31 +111,31 @@ impl PacketDispatcher {
                 1 => Ok(Event::PluginMessage),
                 2 => Ok(Event::DisconnectConfiguration {
                     packet: DisconnectConfigurationClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 3 => Ok(Event::FinishConfiguration {
                     packet: FinishConfigurationPacket,
                 }),
                 4 => Ok(Event::KeepAliveConfiguration {
                     packet: KeepAliveClientboundConfigurationPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 7 => Ok(Event::RegistryData {
                     packet: RegistryDataClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 12 => Ok(Event::FeatureFlags),
                 13 => Ok(Event::UpdateTags {
                     packet: UpdateTagsClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 14 => Ok(Event::KnownPacks {
                     packet: KnownPacksClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 _ => {
-                    println!(
-                        "Unknwon configuration state packet: id: {}, data: {:?}",
+                    trace!(
+                        "Unknown configuration state packet: id: {}, data: {:?}",
                         id, data
                     );
                     Err(Error::UnknownPacket)
@@ -142,22 +144,22 @@ impl PacketDispatcher {
             ConnectionState::Play => match id {
                 32 => Ok(Event::DisconnectPlay {
                     packet: DisconnectPlayClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 44 => Ok(Event::KeepAlivePlay {
                     packet: KeepAliveClientboundPlayPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 49 => Ok(Event::Login {
                     packet: LoginClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 72 => Ok(Event::SynchronizePlayerPosition {
                     packet: SynchronizePlayerClientboundPacket::decode(data)
-                        .map_err(|_| Error::UnknownPacket)?,
+                        .map_err(|_| Error::FailedDecode)?,
                 }),
                 _ => {
-                    println!("Unknwon play state packet: id: {}, data: {:?}", id, data);
+                    trace!("Unknown play state packet: id: {}, data: {:?}", id, data);
                     Err(Error::UnknownPacket)
                 }
             },

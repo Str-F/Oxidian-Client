@@ -1,4 +1,5 @@
 use crate::protocol::types::registry_entry::RegistryEntry;
+use log::warn;
 use std::{collections::HashMap, fs};
 
 #[derive(Debug, Default)]
@@ -19,7 +20,7 @@ impl Registry {
                     if let Ok(json_value) = serde_json::to_value(&data) {
                         registry_map.insert(entry.id, json_value);
                     } else {
-                        eprintln!(
+                        warn!(
                             "Failed to convert NBT data to JSON for entry ID: {}",
                             entry.id
                         );
@@ -29,7 +30,7 @@ impl Registry {
                     if let Some(local_json) = Self::load_from_assets(&registry_id, &entry.id) {
                         registry_map.insert(entry.id, local_json);
                     } else {
-                        eprintln!(
+                        warn!(
                             "No data found for entry ID: {} in registry: {}",
                             entry.id, registry_id
                         );
