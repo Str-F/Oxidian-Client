@@ -1,22 +1,31 @@
 use crate::protocol::types::registry_entry::RegistryEntry;
 use log::{debug, warn};
-use std::{collections::HashMap, fs, path::Path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Registry {
     pub registries: HashMap<String, HashMap<String, serde_json::Value>>,
+    pub assets_dir: PathBuf,
 }
 
 impl Registry {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(assets_dir: PathBuf) -> Self {
+        Self {
+            registries: HashMap::new(),
+            assets_dir,
+        }
     }
 
-    pub fn assets_availabl(&mut self) -> bool {
-        Path::new("assets/data").is_dir()
+    pub fn assets_available(&self) -> bool {
+        self.assets_dir.join("data").is_dir()
     }
 
     pub fn add_to_registry(&mut self, registry_id: String, entries: Vec<RegistryEntry>) {
+        let assets_dir = self.assets_dir.clone();
         let registry_map = self.registries.entry(registry_id.clone()).or_default();
 
         for entry in entries {
@@ -32,7 +41,9 @@ impl Registry {
                     }
                 }
                 None => {
-                    if let Some(local_json) = Self::load_from_assets(&registry_id, &entry.id) {
+                    if let Some(local_json) =
+                        Self::load_from_assets(&assets_dir, &registry_id, &entry.id)
+                    {
                         registry_map.insert(entry.id, local_json);
                     } else {
                         debug!(
@@ -45,12 +56,20 @@ impl Registry {
         }
     }
 
-    pub fn load_from_assets(registry_id: &str, entry_id: &str) -> Option<serde_json::Value> {
+    pub fn load_from_assets(
+        assets_dir: &Path,
+        registry_id: &str,
+        entry_id: &str,
+    ) -> Option<serde_json::Value> {
         let (namespace, path) = registry_id.split_once(':')?;
 
         let entry_name = entry_id.split_once(':')?.1;
 
-        let file_path = format!("assets/data/{}/{}/{}.json", namespace, path, entry_name);
+        let file_path = assets_dir
+            .join("data")
+            .join(namespace)
+            .join(path)
+            .join(format!("{entry_name}.json"));
 
         let file_contents = fs::read_to_string(&file_path).ok()?;
         serde_json::from_str(&file_contents).ok()
