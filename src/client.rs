@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::network::command::NetworkCommand;
 use crate::network::manager::NetworkManager;
 use crate::protocol::dispatcher::Event;
@@ -26,12 +28,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(username: String) -> Self {
+    pub fn new(username: String, assets_dir: PathBuf) -> Self {
         Self {
             username,
             event_receiver: None,
             command_sender: None,
-            registry: Registry::new(),
+            registry: Registry::new(assets_dir),
             tags: Tags::new(),
             running: true,
         }
@@ -107,8 +109,8 @@ impl Client {
     }
 
     pub async fn connect_server(&mut self, server: &Server) {
-        self.registry = Registry::new();
-        if !self.registry.assets_availabl() {
+        self.registry = Registry::new(self.registry.assets_dir.clone());
+        if !self.registry.assets_available() {
             warn!("assets/data not found. Registry entries without server data will be missing.");
         }
         self.tags = Tags::new();

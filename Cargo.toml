@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bytes = "1.12.1"
-clap = { version = "4.6.7", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive", "env"] }
 env_logger = "0.11.11"
 fastnbt = "2.6.3"
 flate2 = "1.1.10"
