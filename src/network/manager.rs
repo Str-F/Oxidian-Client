@@ -102,6 +102,7 @@ impl NetworkManager {
 
     pub async fn join_server(
         server: &Server,
+        username: String,
     ) -> Result<(mpsc::Sender<NetworkCommand>, mpsc::Receiver<Event>), Error> {
         let mut connection = Connection::new(server.host(), server.port()).await?;
 
@@ -119,8 +120,7 @@ impl NetworkManager {
         connection.set_state(ConnectionState::Login);
         debug!("Changed connection state to Login");
 
-        let login_start_packet =
-            LoginStartPacket::new(client::USERNAME.to_string(), Uuid::new_v4());
+        let login_start_packet = LoginStartPacket::new(username, Uuid::new_v4());
 
         debug!(
             "Sending login start packet to server: {:?}",

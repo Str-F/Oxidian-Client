@@ -15,9 +15,9 @@ use tokio::sync::mpsc;
 
 pub const PROTOCOL_VER: i32 = 776;
 pub const MC_VER: &str = "26.2";
-pub const USERNAME: &str = "OxidianClientUsr";
 
 pub struct Client {
+    username: String,
     event_receiver: Option<mpsc::Receiver<Event>>,
     command_sender: Option<mpsc::Sender<NetworkCommand>>,
     registry: Registry,
@@ -26,8 +26,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new() -> Self {
+    pub fn new(username: String) -> Self {
         Self {
+            username,
             event_receiver: None,
             command_sender: None,
             registry: Registry::new(),
@@ -40,9 +41,9 @@ impl Client {
         self.running = false;
     }
 
-    pub async fn run(&mut self) {
-        self.get_status().await;
-        self.connect_server().await;
+    pub async fn run(&mut self, server: &Server) {
+        self.get_status(&server).await;
+        self.connect_server(&server).await;
 
         while self.running {
             self.update();
@@ -50,9 +51,7 @@ impl Client {
         }
     }
 
-    pub async fn get_status(&mut self) {
-        let server = Server::new("localhost", 25565);
-
+    pub async fn get_status(&mut self, server: &Server) {
         match NetworkManager::get_status_server(&server).await {
             Ok(status) => {
                 match serde_json::from_str::<serde_json::Value>(&status.0.json_response) {
@@ -102,12 +101,11 @@ impl Client {
         }
     }
 
-    pub async fn connect_server(&mut self) {
-        let server = Server::new("localhost", 25565);
+    pub async fn connect_server(&mut self, server: &Server) {
         self.registry = Registry::new();
         self.tags = Tags::new();
 
-        match NetworkManager::join_server(&server).await {
+        match NetworkManager::join_server(&server, self.username.clone()).await {
             Ok((command_sender, event_receiver)) => {
                 self.command_sender = Some(command_sender);
                 self.event_receiver = Some(event_receiver);
