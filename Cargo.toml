@@ -1,7 +1,13 @@
 [package]
 name = "oxidian_client"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
+description = "A headless Minecraft client written in Rust, supporting protocol version 776 (Minecraft 26.2)"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Str-F/Oxidian-Client"
+readme = "README.md"
+keywords = ["minecraft", "client", "protocol"]
+categories = ["network-programming", "command-line-utilities"]
 
 [dependencies]
 bytes = "1.12.1"
