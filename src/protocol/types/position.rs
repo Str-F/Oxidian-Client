@@ -2,6 +2,7 @@ use bytes::{Buf, BufMut, BytesMut};
 
 use crate::protocol::error::ProtocolError;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Position {
     pub x: i32,
@@ -23,6 +24,7 @@ impl Position {
         Ok(Position { x, y, z })
     }
 
+    #[allow(dead_code)]
     pub fn encode(buffer: &mut BytesMut, position: &Position) {
         let value = ((position.x as i64 & 0x3FFFFFF) << 38)
             | ((position.z as i64 & 0x3FFFFFF) << 12)

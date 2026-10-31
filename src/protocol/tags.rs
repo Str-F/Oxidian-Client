@@ -15,6 +15,7 @@ impl Tags {
         registry_tags.insert(tag_name, entries.into_iter().collect());
     }
 
+    #[expect(dead_code)]
     pub fn is_in_tag(&self, tag_registry: &str, tag_name: &str, tag_id: i32) -> bool {
         self.tags.get(tag_registry).is_some_and(|registry_tags| {
             registry_tags

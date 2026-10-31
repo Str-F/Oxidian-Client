@@ -8,6 +8,7 @@ use crate::protocol::{
 use bytes::Buf;
 use bytes::BytesMut;
 
+#[expect(dead_code)]
 #[derive(Debug)]
 pub struct LoginClientboundPacket {
     entity_id: i32,

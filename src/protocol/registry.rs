@@ -1,6 +1,6 @@
 use crate::protocol::types::registry_entry::RegistryEntry;
-use log::warn;
-use std::{collections::HashMap, fs};
+use log::{debug, warn};
+use std::{collections::HashMap, fs, path::Path};
 
 #[derive(Debug, Default)]
 pub struct Registry {
@@ -12,8 +12,13 @@ impl Registry {
         Self::default()
     }
 
+    pub fn assets_availabl(&mut self) -> bool {
+        Path::new("assets/data").is_dir()
+    }
+
     pub fn add_to_registry(&mut self, registry_id: String, entries: Vec<RegistryEntry>) {
         let registry_map = self.registries.entry(registry_id.clone()).or_default();
+
         for entry in entries {
             match entry.data {
                 Some(data) => {
@@ -30,8 +35,8 @@ impl Registry {
                     if let Some(local_json) = Self::load_from_assets(&registry_id, &entry.id) {
                         registry_map.insert(entry.id, local_json);
                     } else {
-                        warn!(
-                            "No data found for entry ID: {} in registry: {}",
+                        debug!(
+                            "No data found for entry id: {} in registry: {}",
                             entry.id, registry_id
                         );
                     }
@@ -51,6 +56,7 @@ impl Registry {
         serde_json::from_str(&file_contents).ok()
     }
 
+    #[expect(dead_code)]
     pub fn get(&self, registry_id: &str, entry_id: &str) -> Option<&serde_json::Value> {
         self.registries.get(registry_id)?.get(entry_id)
     }

@@ -3,6 +3,7 @@ use crate::protocol::{
 };
 use bytes::{Buf, BytesMut};
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct SynchronizePlayerClientboundPacket {
     pub teleport_id: i32,

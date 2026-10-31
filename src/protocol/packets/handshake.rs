@@ -1,6 +1,7 @@
 use crate::protocol::{state::ConnectionState, traits::packet::ServerboundPacket, varint};
 use bytes::BytesMut;
 
+#[expect(dead_code)]
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ClientIntent {
     Status,

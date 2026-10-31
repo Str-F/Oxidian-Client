@@ -37,11 +37,16 @@ impl Client {
         }
     }
 
+    #[expect(dead_code)]
     pub fn stop(&mut self) {
         self.running = false;
     }
 
     pub async fn run(&mut self, server: &Server) {
+        info!(
+            "Minecraft Client Version: {} | Protocol Version: {}",
+            MC_VER, PROTOCOL_VER
+        );
         self.get_status(&server).await;
         self.connect_server(&server).await;
 
@@ -103,6 +108,9 @@ impl Client {
 
     pub async fn connect_server(&mut self, server: &Server) {
         self.registry = Registry::new();
+        if !self.registry.assets_availabl() {
+            warn!("assets/data not found. Registry entries without server data will be missing.");
+        }
         self.tags = Tags::new();
 
         match NetworkManager::join_server(&server, self.username.clone()).await {
